@@ -74,3 +74,19 @@ def square_signal(signal):
 
 	return y
 
+
+def window_integration(signal, fs):
+	# y(nT) = (1/N) [x(nT- (N - 1) T) +x(nT- (N - 2) T) + ... + x(nT)]
+	
+	# Tamaño de la ventana
+	#N = int(fs*0.1)
+	N = 30
+
+	# Inicializar salida en 0:
+	y = np.zeros((len(signal),1))
+
+	for i in range(len(signal)):
+		if i>=30:
+			y[i] = np.sum(signal[i-N:i])/N
+
+	return y
