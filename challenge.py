@@ -48,14 +48,14 @@ signal = data[0].reshape(-1,)
 
 # Extracción tiempo picos ondas R, tiempo picos ondas P, inicio intervalo PR y fin intervalo PR 
 _, rpeaks = nk.ecg_peaks(signal, sampling_rate=fs)
-_, waves_cwt = nk.ecg_delineate(signal, rpeaks, sampling_rate=fs, method="cwt", show=True, show_type='all')
+_, waves_cwt = nk.ecg_delineate(signal, rpeaks, sampling_rate=fs, method="cwt", show=True, show_type='peaks')
 
 # Tiempos ondas R
 r_times = rpeaks['ECG_R_Peaks']
 r_times = r_times[~np.isnan(r_times)]
 
 # Tiempos ondas P
-p_times = np.array(waves_cwt['ECG_Q_Peaks'])
+p_times = np.array(waves_cwt['ECG_P_Peaks'])
 p_times = p_times[~np.isnan(p_times)]
 
 # Tiempos inicio intervalo PR
@@ -66,8 +66,22 @@ pr_begin_times = pr_begin_times[~np.isnan(pr_begin_times)]
 pr_end_times = np.array(waves_cwt['ECG_R_Onsets'])
 pr_end_times = pr_end_times[~np.isnan(pr_end_times)]
 
+
 # Intervalos RR
-rr = r_times[1:]-r_times[-1]
+rr_times = (r_times[1:]-r_times[:-1])/fs
+
+# Covaraianza intervalo RR
+rr_cov = np.cov(rr_times)
+
+# Desviación estandar intervalo RR
+rr_std = np.std(rr_times)
+
+# Relación número ondas p y ondas R
+p_r_rel = len(p_times)/len(r_times)
+
+# Diferencia del promedio de los 5 RR max y el promedio de los 5 RR min
+rr_diff =(np.mean(np.sort(rr_times)[-5:])) - (np.mean(np.sort(rr_times)[:5]))
+
 
 # fig, axs = plt.subplots(4)
 # fig.suptitle('Etapas pan_tompkins')
@@ -92,9 +106,7 @@ rr = r_times[1:]-r_times[-1]
 # fig.legend()
 
 plt.plot(signal)
-plt.plot(r_times,signal[r_times], "x")
-plt.plot(p_times,signal[p_times], ".")
-plt.plot(pr_begin_times,signal[pr_begin_times], "/")
+plt.plot(p_times,signal[p_times.astype(int)], "x")
 plt.plot(pr_end_times,signal[pr_end_times], "-")
 plt.grid()
 plt.show()
