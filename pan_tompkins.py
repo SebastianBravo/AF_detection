@@ -1,4 +1,9 @@
 import numpy as np
+from scipy.signal import find_peaks
+import neurokit2 as nk
+
+def normalize(signal):
+	return (signal-min(signal))/(max(signal)-min(signal))
 
 def low_pass_filter(signal):
 	# y(nT) = 2y(nT - T) - y(nT - 2 T) + x(nT) - 2x(nT- 6T) + x(nT- 12T) 
@@ -80,13 +85,16 @@ def window_integration(signal, fs):
 	
 	# Tamaño de la ventana
 	#N = int(fs*0.1)
-	N = 30
+	N = 70
 
 	# Inicializar salida en 0:
 	y = np.zeros((len(signal),1))
 
 	for i in range(len(signal)):
-		if i>=30:
+		if i>=N:
 			y[i] = np.sum(signal[i-N:i])/N
 
 	return y
+
+def peak_finder(signal):
+	return find_peaks(signal.reshape(len(signal),), height=20, width=70)[0]
