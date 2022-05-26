@@ -1,6 +1,3 @@
-#!/usr/bin/python3
-# Example challenge entry
-
 import sys
 import scipy.io
 import matplotlib.pyplot as plt
@@ -8,6 +5,7 @@ import numpy as np
 import pan_tompkins as pt
 import neurokit2 as nk
 import random
+from scipy.signal import find_peaks
 
 # Importar base de datos
 # Importar etiquetas 
@@ -28,7 +26,6 @@ for i in af_idx:
 # Balancear clases:
 # Se tienen 771 muestras de AF y 5154 muestras de Sinusal Normal
 # Se temona 771 muestras aleatorias de ritmo Sinusal normal
-
 # random.shuffle(normal_signals)
 normal_signals = normal_signals[0:len(af_signals)]
 
@@ -38,50 +35,53 @@ data = normal_signals + af_signals
 # Frecuencia de muestreo
 fs = 300
 
-
 # Extracción de características 
-# [Desviación estándar intervalo RR, Relación número ondas p y ondas R, Promedio segmento PR, diferencia RR max y RR min]
-features = np.zeros(len(data), )
+# [Covarianza intervalo RR, Desviación estándar intervalo RR, diferencia RR max y RR min, Relación número ondas p y ondas R]
+X = np.zeros((len(data),4))
 
+for i in range(len(data)):
+	signal = data[i].reshape(-1,)
 
-signal = data[0].reshape(-1,)
+	# Extracción tiempo picos ondas R, tiempo picos ondas P, inicio intervalo PR y fin intervalo PR 
+	_, rpeaks = nk.ecg_peaks(signal, sampling_rate=fs)
 
-# Extracción tiempo picos ondas R, tiempo picos ondas P, inicio intervalo PR y fin intervalo PR 
-_, rpeaks = nk.ecg_peaks(signal, sampling_rate=fs)
-_, waves_cwt = nk.ecg_delineate(signal, rpeaks, sampling_rate=fs, method="cwt", show=True, show_type='peaks')
+	# Tiempos ondas R
+	r_times = rpeaks['ECG_R_Peaks']
+	r_times = r_times[~np.isnan(r_times)]
 
-# Tiempos ondas R
-r_times = rpeaks['ECG_R_Peaks']
-r_times = r_times[~np.isnan(r_times)]
+	# Intervalos RR
+	rr_times = (r_times[1:]-r_times[:-1])
 
-# Tiempos ondas P
-p_times = np.array(waves_cwt['ECG_P_Peaks'])
-p_times = p_times[~np.isnan(p_times)]
+	# Covaraianza intervalo RR
+	rr_cov = np.cov(rr_times/fs)
 
-# Tiempos inicio intervalo PR
-pr_begin_times = np.array(waves_cwt['ECG_P_Onsets'])
-pr_begin_times = pr_begin_times[~np.isnan(pr_begin_times)]
+	# Desviación estandar intervalo RR
+	rr_std = np.std(rr_times/fs)
 
-# Tiempos fin intervalo PR
-pr_end_times = np.array(waves_cwt['ECG_R_Onsets'])
-pr_end_times = pr_end_times[~np.isnan(pr_end_times)]
+	# Diferencia del promedio de los 5 RR max y el promedio de los 5 RR min
+	rr_diff =(np.mean(np.sort(rr_times/fs)[-5:])) - (np.mean(np.sort(rr_times/fs)[:5]))
 
+	# Tiempos ondas P
+	p_times = np.zeros(len(rr_times),)
 
-# Intervalos RR
-rr_times = (r_times[1:]-r_times[:-1])/fs
+	for j in range(len(r_times)-1):
+		inicio = int(r_times[j+1] - 0.3*rr_times[j])
+		fin = int(r_times[j+1] - 0.1*rr_times[j])
 
-# Covaraianza intervalo RR
-rr_cov = np.cov(rr_times)
+		signal_p = np.zeros(len(signal),)
+		signal_p[inicio:fin] = signal[inicio:fin]
 
-# Desviación estandar intervalo RR
-rr_std = np.std(rr_times)
+		p_times[j] = np.argmax(signal_p) if signal[np.argmax(signal_p)]>3*np.mean(signal) else None
 
-# Relación número ondas p y ondas R
-p_r_rel = len(p_times)/len(r_times)
+	p_times = p_times[~np.isnan(p_times)]
 
-# Diferencia del promedio de los 5 RR max y el promedio de los 5 RR min
-rr_diff =(np.mean(np.sort(rr_times)[-5:])) - (np.mean(np.sort(rr_times)[:5]))
+	# Relación número ondas p y ondas R
+	p_r_rel = len(p_times)/len(r_times)
 
+	X[i] = np.array([rr_cov,rr_std,rr_diff,p_r_rel])
+
+# Etiquetas 0 == Ritmo Sinusal Normal, 1 == AF
+y = np.concatenate((np.zeros(len(normal_signals),), np.ones(len(af_signals))),axis=0)
 
 # fig, axs = plt.subplots(4)
 # fig.suptitle('Etapas pan_tompkins')
@@ -106,7 +106,8 @@ rr_diff =(np.mean(np.sort(rr_times)[-5:])) - (np.mean(np.sort(rr_times)[:5]))
 # fig.legend()
 
 plt.plot(signal)
-plt.plot(p_times,signal[p_times.astype(int)], "x")
-plt.plot(pr_end_times,signal[pr_end_times], "-")
-plt.grid()
-plt.show()
+plt.plot(r_times,signal[r_times.astype(int)], "x")
+# plt.ylim(min(signal),np.mean(signal))
+# plt.plot(pr_end_times,signal[pr_end_times], "-")
+# plt.grid()
+# plt.show()
