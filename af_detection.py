@@ -34,7 +34,7 @@ for i in af_idx:
 
 # Balancear clases:
 # Se tienen 771 muestras de AF y 5154 muestras de Sinusal Normal
-# Se temona 771 muestras aleatorias de ritmo Sinusal normal
+# Se temona 771 muestras ritmo Sinusal normal
 # random.shuffle(normal_signals)
 normal_signals = normal_signals[0:len(af_signals)]
 
@@ -221,31 +221,8 @@ acc_svm = 100*((c_svm[0,0] + c_svm[1,1])/np.sum(c_svm))
 se_svm = 100*c_svm[0,0]/(c_svm[0,0] + c_svm[0,1])
 sp_svm = 100*c_svm[1,1]/(c_svm[1,1] + c_svm[1,0])
 
-# fig, axs = plt.subplots(4)
-# fig.suptitle('Etapas pan_tompkins')
-# axs[0].plot(real, label='real')
-# axs[0].plot(peaks,real[peaks], "x")
-# axs[0].plot(lp_signal, label='lp')
-# axs[0].plot(hp_signal, label='hp')
-# axs[1].plot(deriv_signal, label='der')
-# axs[2].plot(sqr_signal, label='sqr')
-# axs[3].plot(int_signal, label='int')
-# axs[3].plot(peaks,int_signal[peaks], "x")
-
-# axs[0].grid()
-# axs[1].grid()
-# axs[2].grid()
-# axs[3].grid()
-# axs[0].set_xlim(0,len(real))
-# axs[1].set_xlim(0,len(real))
-# axs[2].set_xlim(0,len(real))
-# axs[3].set_xlim(0,len(real))
-
-# fig.legend()
-
 plt.plot(signal)
 plt.plot(r_times,signal[r_times.astype(int)], "x")
-# plt.ylim(min(signal),np.mean(signal))
-# plt.plot(pr_end_times,signal[pr_end_times], "-")
-# plt.grid()
-# plt.show()
+plt.xlim(0,len(signal))
+plt.grid()
+plt.show()
